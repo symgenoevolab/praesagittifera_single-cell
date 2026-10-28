@@ -11,3 +11,18 @@ If you use any code or resources from this repository, please cite the above stu
 
 The "main figure" directory includes:
 
+Pna_rsd_construction.Rmd (Figure 1c)
+
+Generate a Seurat RDS object and UMAP plots from the single-cell RNA-seq dataset of Praesagittifera naikaiensis deposited in NCBI GEO (GSE351334).
+
+Pna_DoHeatmap.Rmd (Figure 1d)
+
+Generate a gene-expression heatmap with the top 10 marker genes for each cell type.
+
+
+---
+Resources: 
+
+Single-cell RNA sequencing data are available through NCBI Gene Expression Omnibus (GEO) under accession GSE351334.
+
+Gene models, including coding sequences, protein sequences and gene annotations, and gene lists used in this study are deposited in Zenodo (https://doi.org/10.5281/zenodo.23496335)
