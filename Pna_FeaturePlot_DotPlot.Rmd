@@ -1,0 +1,86 @@
+---
+title: "Pna scRNA-seq FeaturePlot and DotPlot"
+author: "Tosuke"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries}
+library(Seurat)
+library(ggplot2)
+library(dplyr)
+```
+
+## Load Seurat object
+
+```{r load}
+obj <- readRDS("/mnt/data/tosuke/R/scRNAseq_Pn/github/Pna_UMAP.rds")
+ncol(obj) # No. of cells
+nrow(obj) # No. of genes
+```
+
+## Set cell-type identities
+
+```{r idents, fig.width = 10, fig.height = 7}
+Idents(obj) <- "cell_type"
+
+levels(obj) <- c(
+  "Digestive",
+  "Endoderm-like I",
+  "Endoderm-like II and III",
+  "Endodermal progenitor",
+  "Stem cells",
+  "Cilia related",
+  "Epithelial",
+  "Muscle",
+  "Neurons",
+  "Sensory neurons",
+  "TRP+ neurons",
+  "Secretory cells",
+  "Unknown"
+)
+
+DimPlot(obj, reduction = "umap", label = TRUE, pt.size = 1) + NoLegend()
+```
+
+## Genes of interest
+
+```{r genes}
+genes <- c("g37041", "g29952")
+```
+
+## FeaturePlot
+
+```{r featureplot, fig.width = 12, fig.height = 5}
+FeaturePlot(
+  object = obj,
+  features = genes,
+  reduction = "umap",
+  pt.size = 1,
+  order = TRUE
+) +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 12)
+  )
+```
+
+## DotPlot
+
+```{r dotplot, fig.width = 8, fig.height = 6}
+DotPlot(
+  object = obj,
+  features = genes
+) +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 12)
+  )
+```

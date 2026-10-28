@@ -1,0 +1,122 @@
+---
+title: "Pna scRNA-seq DoHeatmap"
+author: "Tosuke"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries}
+library(Seurat)
+library(ggplot2)
+library(dplyr)
+```
+
+## Load Seurat object
+
+```{r load}
+obj <- readRDS("/mnt/data/tosuke/R/scRNAseq_Pn/github/Pna_UMAP.rds")
+ncol(obj) # No. of cells
+nrow(obj) # No. of genes
+```
+
+## Set cell-type identities
+
+```{r idents, fig.width = 10, fig.height = 7}
+Idents(obj) <- "cell_type"
+
+levels(obj) <- c(
+  "Digestive",
+  "Endoderm-like I",
+  "Endoderm-like II and III",
+  "Endodermal progenitor",
+  "Stem cells",
+  "Cilia related",
+  "Epithelial",
+  "Muscle",
+  "Neurons",
+  "Sensory neurons",
+  "TRP+ neurons",
+  "Secretory cells",
+  "Unknown"
+)
+
+DimPlot(obj, reduction = "umap", label = TRUE, pt.size = 1) + NoLegend()
+```
+
+## Find marker genes for each cell type
+
+```{r find-markers}
+markers <- FindAllMarkers(obj, only.pos = TRUE)
+
+write.csv(markers,
+          "/mnt/data/tosuke/R/scRNAseq_Pn/github/Pna_markers_celltype.csv",
+          row.names = FALSE)
+
+head(markers)
+```
+
+## Select top 10 marker genes per cell type
+
+```{r markers}
+top10 <- markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 2) %>%
+  arrange(desc(pct.1)) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  mutate(cluster = factor(cluster, levels = levels(obj))) %>%
+  arrange(cluster)  
+
+table(top10$cluster)
+
+obj <- ScaleData(obj, features = top10$gene)
+```
+
+## DoHeatmap
+
+```{r doheatmap, fig.width = 12, fig.height = 10}
+DoHeatmap(obj, features = top10$gene, group.by = "ident") +
+  scale_fill_gradientn(
+    colors = c("white","white","#F0F921FF", "#FCA636FF", "#E16462FF","#B12A90FF","#6A00A8FF","#0D0887FF"),
+    values = scales::rescale(c(0, 0.5, 0.8, 1.5, 3, 4, 4.2, 5)),
+    limits = c(0, 3),
+    oob = scales::squish,
+    na.value = "white",
+    name = "Expression"
+  )
+```
+
+## Matrix of values underlying DoHeatmap
+
+```{r doheatmap-matrix}
+p_heatmap <- DoHeatmap(obj, features = top10$gene, group.by = "ident")
+heatmap_df <- p_heatmap$data  # Feature, Cell, Expression, Identity
+
+# Drop the blank spacer columns DoHeatmap inserts between groups
+heatmap_df <- heatmap_df %>% dplyr::filter(Cell %in% colnames(obj))
+
+heatmap_matrix <- heatmap_df %>%
+  dplyr::distinct(Feature, Cell, .keep_all = TRUE) %>%
+  dplyr::select(Feature, Cell, Expression) %>%
+  tidyr::pivot_wider(names_from = Cell, values_from = Expression) %>%
+  tibble::column_to_rownames("Feature")
+
+# Row order: cluster order from top10, genes de-duplicated (first occurrence)
+gene_order <- unique(top10$gene)
+gene_order <- gene_order[gene_order %in% rownames(heatmap_matrix)]
+heatmap_matrix <- heatmap_matrix[gene_order, ]
+
+# Column order: same cell order (grouped/sorted by identity) as the heatmap
+cell_order <- heatmap_df %>% dplyr::distinct(Cell, Identity) %>% dplyr::arrange(Identity)
+heatmap_matrix <- heatmap_matrix[, cell_order$Cell]
+
+dim(heatmap_matrix)  # genes x cells
+
+# Cell type (Identity) per barcode, in the same column order as the matrix
+cell_annotation <- cell_order
+colnames(cell_annotation) <- c("Cell", "CellType")
+```
+
