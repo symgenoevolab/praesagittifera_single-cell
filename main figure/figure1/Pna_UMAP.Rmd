@@ -1,0 +1,110 @@
+---
+title: "Pna scRNA-seq UMAP"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries}
+library(Seurat)
+```
+
+## Load data
+
+```{r load}
+# Load cell-type annotations
+meta <- read.delim(
+  "Pna.cell_to_cts.csv.gz",
+  row.names = 1
+)
+
+# Load gene expression count matrix
+counts <- ReadMtx(
+  mtx = "Pna.counts.mtx.gz",
+  cells = "Pna.cell_to_cts.csv.gz",
+  cell.column = 1,
+  skip.cell = 1,
+  features = "Pna.genes.txt.gz",
+  feature.column = 1
+)
+
+# Align metadata with cell barcodes
+stopifnot(all(colnames(counts) %in% rownames(meta)))
+meta <- meta[colnames(counts), , drop = FALSE]
+```
+
+## Create Seurat object
+
+```{r seurat}
+pna <- CreateSeuratObject(
+  counts = counts,
+  meta.data = meta,
+  project = "Pna",
+  min.cells = 5
+)
+
+# Inspect cell-type distribution
+table(pna$cell_type)
+```
+
+## Normalization, PCA, clustering, UMAP
+
+```{r umap}
+# Normalize data (LogNormalize, scale factor 10,000) and identify variable features
+pna <- NormalizeData(pna, normalization.method = "LogNormalize", scale.factor = 10000)
+pna <- FindVariableFeatures(pna)
+
+# Scale data and perform PCA
+pna <- ScaleData(pna)
+pna <- RunPCA(pna, npcs = 50)
+
+# Construct shared nearest-neighbor graph using the first 40 PCs and cluster
+pna <- FindNeighbors(pna, dims = 1:40)
+pna <- FindClusters(pna, resolution = 0.8)
+
+# Compute UMAP
+pna <- RunUMAP(pna, dims = 1:40, n.neighbors = 30, min.dist = 0.3)
+
+# Rotate UMAP 90 degrees clockwise: (x, y) -> (y, -x)
+umap_emb <- Embeddings(pna, "umap")
+pna[["umap"]]@cell.embeddings <- cbind(
+  umap_1 = umap_emb[, 2],
+  umap_2 = -umap_emb[, 1]
+)
+
+# Number of clusters
+length(levels(pna$seurat_clusters))
+```
+
+## Visualize UMAP by cluster
+
+```{r dimplot_cluster, fig.width = 10, fig.height = 7}
+DimPlot(
+  pna,
+  reduction = "umap",
+  pt.size = 0.5,
+  group.by = "seurat_clusters",
+  label = TRUE
+)
+```
+
+## Visualize UMAP by annotated cell type
+
+```{r dimplot, fig.width = 10, fig.height = 7}
+DimPlot(
+  pna,
+  reduction = "umap",
+  pt.size = 0.5,
+  group.by = "cell_type",
+  label = TRUE,
+  repel = TRUE
+)
+```
+
+## Save Seurat object
+
+```{r save}
+saveRDS(pna, "Pna_UMAP.rds")
+```
