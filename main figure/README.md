@@ -1,4 +1,4 @@
-### This project includes code used for the analyses
+### This directory includes code:
 
 
 - Pna_rsd_construction.Rmd (Figure 1c)
