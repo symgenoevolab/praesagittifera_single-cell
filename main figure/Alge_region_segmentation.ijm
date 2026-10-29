@@ -1,0 +1,12 @@
+run("Options...", "iterations=1 count=1 black do=Nothing");
+run("Set Measurements...", "area mean min display redirect=None decimal=3");
+roiManager("reset");
+run("Duplicate...", "duplicate channels=1");
+run("Median...", "radius=3");
+setAutoThreshold("Otsu dark");
+setOption("BlackBackground", true);
+run("Convert to Mask");
+run("Create Selection");
+roiManager("Add");
+roiManager("select", 0);
+roiManager("rename", "Alge_region");
