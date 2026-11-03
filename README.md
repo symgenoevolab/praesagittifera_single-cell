@@ -33,6 +33,7 @@ Detects algal autofluorescence in confocal images and measures algal area within
 Detects starch granules in algal symbionts in TEM images and measures their area to calculate starch density.
 
 ---
+Others:
 
 - fix_braker_gtf.py [Python script]
 
